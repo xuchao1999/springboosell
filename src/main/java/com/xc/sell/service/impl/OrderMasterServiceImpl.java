@@ -123,17 +123,17 @@ public class OrderMasterServiceImpl implements OrderMasterService {
     @Override
     public List<OrderDTO> findByOpenId(String openId) {
 
-        log.error("findByOpenId={}", openId);
+        log.info("findByOpenId={}", openId);
         List<OrderDTO> orderDTOS = new ArrayList<>();
         List<OrderMaster> orderMasters = orderMasterRepository.findByOpenId(openId);
-        log.error("orderMasters={}", orderMasters);
+        log.info("orderMasters={}", orderMasters);
         if(orderMasters.size() == 0){
             throw new SellsException(ResultEnum.ORDER_NOT_EXIST);
         }
         for(OrderMaster orderMaster : orderMasters){
             OrderDTO orderDTO = new OrderDTO();
             BeanUtils.copyProperties(orderMaster, orderDTO);
-            log.error("订单赋值： ", orderDTO.toString());
+            log.info("订单赋值： ", orderDTO.toString());
             List<OrderDetail> orderDetails = orderDetailRepository.findByOrderId(orderMaster.getOrderId());
             if(orderDetails.size() == 0){
                 throw new SellsException(ResultEnum.ORDER_DETAIL_EMPTY);

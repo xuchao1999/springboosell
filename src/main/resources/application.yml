@@ -12,3 +12,10 @@ server:
   servlet:
     context-path: /sell
   port: 8082
+pay:
+  wxpay:
+    appid: wx3099e22e6dcb8d58
+    secret: 087e35d25df0aa70db1e2069ebac3fff
+    mch_id: 1503825991
+    partner_key: 7B577E935B4ED0809F989052B4D29948
+    notify_url: http://127.0.0.1:8360/api/pay/notify
