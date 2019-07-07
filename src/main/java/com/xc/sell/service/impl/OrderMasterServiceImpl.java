@@ -29,6 +29,8 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 @Slf4j
@@ -57,22 +59,34 @@ public class OrderMasterServiceImpl implements OrderMasterService {
         /*查询商品（数量和价格）*/
         BigDecimal orderAmount = new BigDecimal(BigInteger.ZERO);
 
-        for(OrderDetail orderDetail : orderDTO.getOrderDetailList()){
-            ProductInfo productInfo = productInfoService.findOne(orderDetail.getProductId());
-            if(productInfo == null){
-                throw new SellsException(ResultEnum.PRODUCT_NOT_EXIST);
+        Lock lock = new ReentrantLock();
+
+        /**lock 解决高并发减库存操作
+         * 等学了redis后可以用redis解决高并发问题
+         * */
+        lock.lock();
+        try{
+            for(OrderDetail orderDetail : orderDTO.getOrderDetailList()){
+                ProductInfo productInfo = productInfoService.findOne(orderDetail.getProductId());
+                if(productInfo == null){
+                    throw new SellsException(ResultEnum.PRODUCT_NOT_EXIST);
+                }
+                /*计算总价*/
+                orderAmount = orderAmount.add(productInfo.getProductPrice().multiply(BigDecimal.valueOf(orderDetail.getProductQuantity())));
+
+                /*订单详情入库*/
+                orderDetail.setOrderId(orderId);
+                orderDetail.setDetailId(KeyUtil.getUniqueKey());
+                orderDetailRepository.save(orderDetail);
+
+                /*扣库存*/
+                productInfoService.decreaseStock(productInfo.getProductId(), orderDetail.getProductQuantity());
             }
-            /*计算总价*/
-            orderAmount = orderAmount.add(productInfo.getProductPrice().multiply(BigDecimal.valueOf(orderDetail.getProductQuantity())));
-            /*订单详情入库*/
-            orderDetail.setOrderId(orderId);
-            orderDetail.setDetailId(KeyUtil.getUniqueKey());
-
-            orderDetailRepository.save(orderDetail);
-
-            /*扣库存*/
-            productInfoService.decreaseStock(productInfo.getProductId(), orderDetail.getProductQuantity());
+        }finally {
+            lock.unlock();
         }
+
+
         /*写入订单数据库*/
         OrderMaster orderMaster = new OrderMaster();
         orderDTO.setOrderId(orderId);
