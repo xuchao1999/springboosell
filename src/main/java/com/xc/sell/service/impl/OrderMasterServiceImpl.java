@@ -10,10 +10,7 @@ import com.xc.sell.enums.ResultEnum;
 import com.xc.sell.exception.SellsException;
 import com.xc.sell.repository.OrderDetailRepository;
 import com.xc.sell.repository.OrderMasterRepository;
-import com.xc.sell.service.AddressService;
-import com.xc.sell.service.OrderMasterService;
-import com.xc.sell.service.ProductInfoService;
-import com.xc.sell.service.UserInfoService;
+import com.xc.sell.service.*;
 import com.xc.sell.util.DateUtil;
 import com.xc.sell.util.KeyUtil;
 import com.xc.sell.util.ResultVOUtil;
@@ -51,41 +48,47 @@ public class OrderMasterServiceImpl implements OrderMasterService {
     @Autowired
     private AddressService addressService;
 
+    @Autowired
+    private RedisService redisService;
+
     @Override
     @Transactional
     public OrderDTO create(OrderDTO orderDTO) {
 
         String orderId = KeyUtil.getUniqueKey();
+
+        long time = System.currentTimeMillis() + 1000 * 10;
+
+        boolean isLock = redisService.lock(orderId, String.valueOf(time));
+
+        if(isLock){
+            throw new RuntimeException("人太多请换个姿势试试");
+        }
+
         /*查询商品（数量和价格）*/
         BigDecimal orderAmount = new BigDecimal(BigInteger.ZERO);
 
-        Lock lock = new ReentrantLock();
 
-        /**lock 解决高并发减库存操作
-         * 等学了redis后可以用redis解决高并发问题
+        /**
+         * redis后可以用redis解决高并发问题,解决超卖问题
          * */
-        lock.lock();
-        try{
-            for(OrderDetail orderDetail : orderDTO.getOrderDetailList()){
-                ProductInfo productInfo = productInfoService.findOne(orderDetail.getProductId());
-                if(productInfo == null){
-                    throw new SellsException(ResultEnum.PRODUCT_NOT_EXIST);
-                }
-                /*计算总价*/
-                orderAmount = orderAmount.add(productInfo.getProductPrice().multiply(BigDecimal.valueOf(orderDetail.getProductQuantity())));
 
-                /*订单详情入库*/
-                orderDetail.setOrderId(orderId);
-                orderDetail.setDetailId(KeyUtil.getUniqueKey());
-                orderDetailRepository.save(orderDetail);
-
-                /*扣库存*/
-                productInfoService.decreaseStock(productInfo.getProductId(), orderDetail.getProductQuantity());
+        for(OrderDetail orderDetail : orderDTO.getOrderDetailList()){
+            ProductInfo productInfo = productInfoService.findOne(orderDetail.getProductId());
+            if(productInfo == null){
+                throw new SellsException(ResultEnum.PRODUCT_NOT_EXIST);
             }
-        }finally {
-            lock.unlock();
-        }
+            /*计算总价*/
+            orderAmount = orderAmount.add(productInfo.getProductPrice().multiply(BigDecimal.valueOf(orderDetail.getProductQuantity())));
 
+            /*订单详情入库*/
+            orderDetail.setOrderId(orderId);
+            orderDetail.setDetailId(KeyUtil.getUniqueKey());
+            orderDetailRepository.save(orderDetail);
+
+            /*扣库存*/
+            productInfoService.decreaseStock(productInfo.getProductId(), orderDetail.getProductQuantity());
+        }
 
         /*写入订单数据库*/
         OrderMaster orderMaster = new OrderMaster();
@@ -94,6 +97,7 @@ public class OrderMasterServiceImpl implements OrderMasterService {
         orderMaster.setOrderAmount(orderAmount);
         orderMasterRepository.save(orderMaster);
 
+        redisService.unlock(orderId, String.valueOf(time));
         return orderDTO;
     }
 
