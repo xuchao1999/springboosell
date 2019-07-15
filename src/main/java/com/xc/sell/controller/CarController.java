@@ -1,5 +1,6 @@
 package com.xc.sell.controller;
 
+import com.xc.sell.annotation.AuthToken;
 import com.xc.sell.dto.CarDTO;
 import com.xc.sell.form.CarForm;
 import com.xc.sell.service.CarInfoService;
@@ -19,18 +20,21 @@ public class CarController {
     private CarInfoService carInfoService;
 
     @PostMapping("/add")
+    @AuthToken
     public ResultVO add(@RequestBody CarForm carForm){
         CarDTO carDTO = carInfoService.add(carForm);
         return ResultVOUtil.success(carDTO);
     }
 
     @GetMapping("/list")
+    @AuthToken
     public ResultVO list(@RequestParam("openId") String openId){
         List<CarDTO> carDTOS = carInfoService.list(openId);
         return ResultVOUtil.success(carDTOS);
     }
 
     @PostMapping("/update")
+    @AuthToken
     public ResultVO update(@RequestBody CarForm carForm){
         log.info("carform={}", carForm);
         CarDTO carDTO = carInfoService.update(carForm);

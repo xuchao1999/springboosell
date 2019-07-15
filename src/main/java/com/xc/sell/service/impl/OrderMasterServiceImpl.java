@@ -61,7 +61,7 @@ public class OrderMasterServiceImpl implements OrderMasterService {
 
         boolean isLock = redisService.lock(orderId, String.valueOf(time));
 
-        if(isLock){
+        if(!isLock){
             throw new RuntimeException("人太多请换个姿势试试");
         }
 

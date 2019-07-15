@@ -24,10 +24,12 @@ public enum ResultEnum {
     ORDER_FINISH_SUCCESS(23, "订单完结成功"),
     PROUDCT_STATUS_ERROR(24, "订单状态不正确"),
     LOGIN_FAIL(25, "登陆失败，登陆信息不正确"),
-    LOGOUT_SUCCESS(26, "登陆成功"),
+    LOGIN_SUCCESS(26, "登陆成功"),
+    LOGOUT_SUCCESS(30, "退出登陆成功"),
     ORDER_ALREADY_PAY(27, "订单已经支付，请不要重复支付"),
     ADDRESS_NOT_EXIST(28, "地址不存在"),
     USER_NOT_EXIST(29, "用户不存在"),
+
     ;
 
     private Integer code;

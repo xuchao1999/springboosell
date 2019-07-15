@@ -4,12 +4,11 @@ import com.xc.sell.config.WechatConfig;
 import com.xc.sell.dataobject.UserInfo;
 import com.xc.sell.dto.InUserInfo;
 import com.xc.sell.dto.LoginDataDTO;
+import com.xc.sell.dto.LogoutDTO;
 import com.xc.sell.dto.OpenIdDTO;
+import com.xc.sell.enums.ConstantsKit;
 import com.xc.sell.service.UserInfoService;
-import com.xc.sell.util.JsonUtil;
-import com.xc.sell.util.KeyUtil;
-import com.xc.sell.util.ResultVOUtil;
-import com.xc.sell.util.TokenUtil;
+import com.xc.sell.util.*;
 import com.xc.sell.viewObject.LoginVO;
 import com.xc.sell.viewObject.ResultVO;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
+
+import javax.servlet.http.HttpServletRequest;
 
 
 @RestController
@@ -28,6 +29,13 @@ public class UserController {
 
     @Autowired
     private WechatConfig wechatConfig;
+
+    @Autowired
+    private TokenUtil tokenUtil;
+
+    @Autowired
+    private RedisUtil redisUtil;
+
 
 
     @PostMapping("/login")
@@ -57,12 +65,32 @@ public class UserController {
             userInfoService.crate(userInfo);
         }
 
+        String token = tokenUtil.createToken(openIdDTO.getOpenid(), userInfo.getId());
+
+        redisUtil.set(openIdDTO.getOpenid(), token);
+        redisUtil.expire(openIdDTO.getOpenid(), ConstantsKit.TOKEN_EXPIRE_TIME.getToken_expire_time());
+        redisUtil.set(token, openIdDTO.getOpenid());
+        redisUtil.expire(token, ConstantsKit.TOKEN_EXPIRE_TIME.getToken_expire_time());
+
+        log.info("loginToken: {}", token);
+
         LoginVO loginVO = new LoginVO();
         loginVO.setOpenid(openIdDTO.getOpenid());
-        loginVO.setToken(TokenUtil.createToken(loginVO.getOpenid(), userInfo.getId()));
+        loginVO.setToken(token);
         loginVO.setUserInfo(inUserInfo);
 
         return ResultVOUtil.success(loginVO);
 //        return null;
+    }
+
+    @PostMapping("/logout")
+    public ResultVO logout(HttpServletRequest request){
+        String token = tokenUtil.getToten(request);
+        log.info("logoutToken: {}", token);
+        String openId = redisUtil.get(token).toString();
+        redisUtil.del(token, openId);
+        LogoutDTO logoutDTO = new LogoutDTO(openId);
+        ResultVO<LoginDataDTO> resultVO = ResultVOUtil.success(logoutDTO);
+        return resultVO;
     }
 }

@@ -56,7 +56,7 @@ public class ProductInfoController {
         return ResultVOUtil.success(productVOS);
     }
 
-    @GetMapping("detail")
+    @GetMapping("/detail")
     public ResultVO detail(@RequestParam("productId") String productId){
         ProductInfo productInfo = productService.findOne(productId);
         return ResultVOUtil.success(productInfo);

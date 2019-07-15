@@ -2,7 +2,6 @@ package com.xc.sell.service.impl;
 
 import com.xc.sell.service.RedisService;
 import com.xc.sell.util.RedisUtil;
-import jdk.internal.vm.compiler.collections.EconomicMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;

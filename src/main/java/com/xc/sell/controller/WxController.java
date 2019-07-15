@@ -29,7 +29,5 @@ public class WxController {
 //        獲取訂單詳情
         OrderDTO orderDTO = orderMasterService.findOne(openId, orderId);
 
-
-
     }
 }
